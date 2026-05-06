@@ -1,11 +1,18 @@
 services:
   ubuntu_gate_app:
-    image: ghcr.io/amacado/ubuntu-gate/ubuntu-gate:latest
+    image: ghcr.io/ubuntu-gate/ubuntu-gate:latest
     labels:
       - traefik.enable=true
-      - traefik.http.routers.ubuntu-gate.rule=Host(`ubuntu-gate.de`) || Host(`www.ubuntu-gate.de`)
+      - traefik.http.routers.ubuntu-gate.rule=Host(`www.ubuntu-gate.de`)
       - traefik.http.routers.ubuntu-gate.entrypoints=websecure
       - traefik.http.routers.ubuntu-gate.tls.certresolver=le
+      - traefik.http.routers.ubuntu-gate-naked.rule=Host(`ubuntu-gate.de`)
+      - traefik.http.routers.ubuntu-gate-naked.entrypoints=websecure
+      - traefik.http.routers.ubuntu-gate-naked.tls.certresolver=le
+      - traefik.http.routers.ubuntu-gate-naked.middlewares=ubuntu-gate-www
+      - traefik.http.middlewares.ubuntu-gate-www.redirectregex.regex=^https://ubuntu-gate\.de/(.*)
+      - traefik.http.middlewares.ubuntu-gate-www.redirectregex.replacement=https://www.ubuntu-gate.de/$${1}
+      - traefik.http.middlewares.ubuntu-gate-www.redirectregex.permanent=true
       - traefik.http.services.ubuntu-gate.loadbalancer.server.port=8080
     networks:
       - proxy
