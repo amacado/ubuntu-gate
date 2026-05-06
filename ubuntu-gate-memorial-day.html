@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UBUNTU-GATE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Inter:wght@900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Inter',sans-serif}
+
+  canvas#bg{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0}
+
+  /* FLASH */
+  .flash{position:fixed;top:0;left:0;width:100%;height:100%;z-index:9999;pointer-events:none;opacity:0;transition:opacity 0.04s}
+  .flash.white{background:#fff;opacity:1}
+  .flash.red{background:#e95420;opacity:0.6}
+
+  /* INTRO PHASES */
+  .intro{position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;background:#000;transition:opacity 0.5s}
+  .intro.gone{opacity:0;pointer-events:none}
+  .intro-line{font-family:'Orbitron',monospace;font-size:12px;letter-spacing:8px;color:#e95420;opacity:0;transform:translateY(20px);transition:all 0.5s ease}
+  .intro-line.show{opacity:1;transform:translateY(0)}
+  .intro-line.hide{opacity:0;transform:translateY(-20px)}
+  .intro-boom{font-family:'Bebas Neue',sans-serif;font-size:min(20vw,200px);color:#fff;opacity:0;transform:scale(4);transition:all 0.25s cubic-bezier(0.16,1,0.3,1);text-shadow:0 0 80px #e95420,0 0 200px rgba(233,84,32,0.5);letter-spacing:10px}
+  .intro-boom.slam{opacity:1;transform:scale(1)}
+
+  /* MAIN SCENE */
+  .main{position:fixed;top:0;left:0;width:100%;height:100%;z-index:10;display:flex;align-items:center;justify-content:center;flex-direction:column;opacity:0;transition:opacity 1.2s ease}
+  .main.show{opacity:1}
+
+  /* 3D perspective container */
+  .perspective-wrap{perspective:800px}
+  .tilt-card{transform-style:preserve-3d;transition:transform 0.1s ease-out}
+
+  /* The monument */
+  .monument{text-align:center;position:relative;padding:40px}
+
+  /* Rotating ring behind title */
+  .ring-container{position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:500px;height:500px;pointer-events:none;z-index:-1}
+  .ring{position:absolute;top:0;left:0;width:100%;height:100%;border:1px solid rgba(233,84,32,0.08);border-radius:50%}
+  .ring:nth-child(1){animation:ringRotate 20s linear infinite}
+  .ring:nth-child(2){width:80%;height:80%;top:10%;left:10%;animation:ringRotate 15s linear infinite reverse;border-color:rgba(61,200,255,0.06)}
+  .ring:nth-child(3){width:60%;height:60%;top:20%;left:20%;animation:ringRotate 25s linear infinite;border-style:dashed;border-color:rgba(233,84,32,0.05)}
+  @keyframes ringRotate{to{transform:rotate(360deg)}}
+
+  /* Pulsing halo */
+  .halo{position:absolute;top:50%;left:50%;transform:translate(-50%,-55%);width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(233,84,32,0.12) 0%,transparent 70%);animation:haloPulse 3s ease-in-out infinite;pointer-events:none;z-index:-1}
+  @keyframes haloPulse{0%,100%{transform:translate(-50%,-55%) scale(1);opacity:0.6}50%{transform:translate(-50%,-55%) scale(1.3);opacity:1}}
+
+  .top-warning{font-family:'Orbitron',monospace;font-size:10px;font-weight:900;letter-spacing:6px;color:#ff3333;animation:alarmBlink 0.8s step-end infinite;margin-bottom:20px}
+  @keyframes alarmBlink{0%,100%{opacity:1}50%{opacity:0.2}}
+
+  .the-word{font-family:'Bebas Neue',sans-serif;font-size:min(18vw,180px);line-height:0.85;color:#fff;position:relative;cursor:default}
+  .the-word .glitch{position:relative;display:inline-block;text-shadow:0 0 80px rgba(233,84,32,0.4)}
+  .the-word .glitch::before,.the-word .glitch::after{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden}
+  .the-word .glitch::before{color:#e95420;animation:g1 0.15s infinite linear alternate;clip-path:inset(0 0 60% 0);opacity:0.8}
+  .the-word .glitch::after{color:#3dc8ff;animation:g2 0.15s infinite linear alternate;clip-path:inset(60% 0 0 0);opacity:0.8}
+  @keyframes g1{0%{transform:translate(0)}25%{transform:translate(-6px,3px)}50%{transform:translate(5px,-2px)}75%{transform:translate(-3px,4px)}100%{transform:translate(0)}}
+  @keyframes g2{0%{transform:translate(0)}25%{transform:translate(4px,-3px)}50%{transform:translate(-5px,2px)}75%{transform:translate(3px,-4px)}100%{transform:translate(0)}}
+
+  /* Mega glitch burst */
+  .the-word{animation:megaGlitch 8s infinite}
+  @keyframes megaGlitch{
+    0%,88%,100%{transform:translate(0) skew(0)}
+    89%{transform:translate(-15px,5px) skew(-5deg)}
+    90%{transform:translate(12px,-8px) skew(3deg)}
+    91%{transform:translate(-8px,3px) skew(-2deg);filter:hue-rotate(40deg) brightness(2)}
+    92%{transform:translate(10px,-4px) skew(4deg);filter:hue-rotate(-30deg)}
+    93%{transform:translate(-5px,6px);filter:none}
+    94%{transform:translate(0) skew(0)}
+  }
+
+  .gate-sub{font-family:'Bebas Neue',sans-serif;font-size:min(8vw,72px);letter-spacing:30px;color:#e95420;text-shadow:0 0 60px rgba(233,84,32,0.8),0 0 120px rgba(233,84,32,0.3);margin-top:-5px}
+
+  .memorial-label{font-family:'Orbitron',monospace;font-size:11px;font-weight:900;letter-spacing:10px;color:rgba(255,255,255,0.2);margin-top:10px;margin-bottom:30px}
+
+  /* HE SAID / HE MEANT */
+  .versus{display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:0;flex-wrap:wrap}
+  .vs-block{text-align:center}
+  .vs-block .small{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:4px;color:rgba(255,255,255,0.25);margin-bottom:6px;text-transform:uppercase}
+  .vs-block .big{font-family:'Bebas Neue',sans-serif;font-size:min(10vw,80px);line-height:1;letter-spacing:4px}
+  .vs-block .big.wrong{color:#e95420;text-shadow:0 0 40px rgba(233,84,32,0.6);position:relative}
+  .vs-block .big.wrong::after{content:'';position:absolute;left:-8px;right:-8px;top:50%;height:6px;background:#ff3333;transform:rotate(-4deg);border-radius:3px;box-shadow:0 0 20px rgba(255,51,51,0.8);animation:xFlash 1.5s ease-in-out infinite}
+  @keyframes xFlash{0%,100%{opacity:1;transform:rotate(-4deg) scaleX(1)}50%{opacity:0.5;transform:rotate(-4deg) scaleX(1.05)}}
+  .vs-block .big.right{color:#3dc8ff;text-shadow:0 0 40px rgba(61,200,255,0.6)}
+  .vs-neq{font-family:'Bebas Neue',sans-serif;font-size:48px;color:rgba(255,255,255,0.1);animation:neqPulse 2s ease-in-out infinite}
+  @keyframes neqPulse{0%,100%{transform:scale(1);opacity:0.1}50%{transform:scale(1.3);opacity:0.25}}
+
+  /* DATE + COUNTER */
+  .date-monument{margin-bottom:40px}
+  .date-line{font-family:'Orbitron',monospace;font-size:min(3.5vw,18px);letter-spacing:6px;color:rgba(255,255,255,0.35);margin-bottom:8px}
+  .date-line .date-val{color:#e95420;text-shadow:0 0 20px rgba(233,84,32,0.4)}
+  .counter-row{display:flex;align-items:baseline;justify-content:center;gap:12px}
+  .counter-num{font-family:'Bebas Neue',sans-serif;font-size:min(14vw,120px);line-height:1;color:#e95420;text-shadow:0 0 60px rgba(233,84,32,0.6),0 0 120px rgba(233,84,32,0.2);position:relative}
+  .counter-num::after{content:'';position:absolute;bottom:-4px;left:0;width:100%;height:2px;background:linear-gradient(90deg,transparent,#e95420,transparent);animation:counterGlow 2s ease-in-out infinite}
+  @keyframes counterGlow{0%,100%{opacity:0.3}50%{opacity:1}}
+  .counter-unit{font-family:'Orbitron',monospace;font-size:min(2.5vw,16px);letter-spacing:4px;color:rgba(255,255,255,0.2);text-transform:uppercase}
+  .counter-sub{font-family:'Orbitron',monospace;font-size:9px;letter-spacing:4px;color:rgba(255,255,255,0.15);margin-top:6px}
+
+  /* EPITAPH */
+  .epitaph{font-family:'Bebas Neue',sans-serif;font-size:min(4vw,28px);letter-spacing:4px;color:rgba(255,255,255,0.15);line-height:1.6;max-width:600px;margin:0 auto 24px}
+  .epitaph em{color:rgba(233,84,32,0.5);font-style:normal}
+
+  /* NEVER FORGET - massive */
+  .never-forget{font-family:'Bebas Neue',sans-serif;font-size:min(6vw,48px);letter-spacing:20px;position:relative;overflow:hidden;padding:16px 0}
+  .never-forget span{position:relative;z-index:1;background:linear-gradient(90deg,#e95420,#ff6f3c,#ffc93c,#ff6f3c,#e95420);background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:nfShimmer 2s linear infinite}
+  @keyframes nfShimmer{to{background-position:300% 0}}
+
+  /* Screen shake util */
+  .shake-hard{animation:shakeHard 0.5s ease-out}
+  @keyframes shakeHard{
+    0%,100%{transform:translate(0) rotate(0)}
+    10%{transform:translate(-12px,8px) rotate(-1deg)}
+    20%{transform:translate(10px,-6px) rotate(1deg)}
+    30%{transform:translate(-8px,10px) rotate(-0.5deg)}
+    40%{transform:translate(8px,-4px) rotate(0.5deg)}
+    50%{transform:translate(-6px,6px)}
+    60%{transform:translate(4px,-8px)}
+    70%{transform:translate(-4px,4px)}
+    80%{transform:translate(6px,-2px)}
+    90%{transform:translate(-2px,2px)}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+<div class="flash" id="flash"></div>
+
+<div class="intro" id="intro">
+  <div class="intro-line" id="i1">Incoming Transmission</div>
+  <div class="intro-line" id="i2" style="margin-top:10px;font-size:10px;color:rgba(255,255,255,0.3)">Decrypting Incident File...</div>
+  <div class="intro-boom" id="boom" style="margin-top:30px">CLASSIFIED</div>
+</div>
+
+<div class="main" id="main">
+  <div class="perspective-wrap">
+    <div class="tilt-card" id="tilt">
+      <div class="monument">
+        <div class="ring-container">
+          <div class="ring"></div>
+          <div class="ring"></div>
+          <div class="ring"></div>
+        </div>
+        <div class="halo"></div>
+
+        <div class="top-warning">⚠ CRITICAL INCIDENT ⚠</div>
+
+        <div class="the-word">
+          <span class="glitch" data-text="UBUNTU">UBUNTU</span>
+        </div>
+        <div class="gate-sub">— GATE —</div>
+        <div class="memorial-label">MEMORIAL DAY</div>
+
+        <div class="date-monument">
+          <div class="date-line"><span class="date-val">16.05.</span> — THE DAY IT HAPPENED</div>
+          <div class="counter-row">
+            <span class="counter-num" id="dayCount">0</span>
+            <span class="counter-unit">Days<br>Since</span>
+          </div>
+          <div class="counter-sub">AND COUNTING</div>
+        </div>
+
+        <div class="versus">
+          <div class="vs-block">
+            <div class="small">He Said</div>
+            <div class="big wrong">UBUNTU</div>
+          </div>
+          <div class="vs-neq">≠</div>
+          <div class="vs-block">
+            <div class="small">He Meant</div>
+            <div class="big right">ARCH</div>
+          </div>
+        </div>
+
+        <div style="height:30px"></div>
+
+        <div class="never-forget"><span>NEVER FORGET</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── PARTICLE ENGINE ───
+const C = document.getElementById('bg'), X = C.getContext('2d');
+let W, H;
+function resize(){W=C.width=innerWidth;H=C.height=innerHeight}
+resize(); addEventListener('resize',resize);
+
+const P = [];
+for(let i=0;i<200;i++) P.push({
+  x:Math.random()*2000, y:Math.random()*2000,
+  vx:(Math.random()-0.5)*0.6, vy:-Math.random()*2-0.3,
+  s:Math.random()*3+0.5, a:Math.random()*0.7+0.1,
+  c:['#e95420','#ff6f3c','#ffc93c','#ff3333','#e95420'][Math.floor(Math.random()*5)],
+  w:Math.random()*Math.PI*2, ws:Math.random()*0.03+0.008,
+  d:Math.random()*0.002+0.0005
+});
+
+// Shockwave rings
+const rings = [];
+function spawnRing(x,y){rings.push({x,y,r:0,a:0.8,speed:6+Math.random()*4})}
+
+// Explosion particles
+const booms = [];
+function spawnExplosion(cx,cy,count){
+  for(let i=0;i<count;i++){
+    const angle=Math.random()*Math.PI*2, speed=Math.random()*8+3;
+    booms.push({x:cx,y:cy,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
+      s:Math.random()*4+1,a:1,c:['#e95420','#ff6f3c','#ffc93c','#fff','#ff3333'][Math.floor(Math.random()*5)],
+      drag:0.96,gravity:0.05})
+  }
+}
+
+function drawLightning(x1,y1,x2,y2,w){
+  X.beginPath();X.moveTo(x1,y1);
+  let px=x1,py=y1;
+  const seg=8+Math.floor(Math.random()*6);
+  for(let i=1;i<=seg;i++){
+    const t=i/seg;
+    const nx=x1+(x2-x1)*t+(Math.random()-0.5)*80;
+    const ny=y1+(y2-y1)*t+(Math.random()-0.5)*30;
+    X.lineTo(nx,ny);
+  }
+  X.strokeStyle='rgba(233,84,32,0.5)';X.lineWidth=w;
+  X.shadowColor='#e95420';X.shadowBlur=40;X.stroke();
+  // Glow pass
+  X.strokeStyle='rgba(255,200,100,0.15)';X.lineWidth=w+6;X.stroke();
+  X.shadowBlur=0;
+}
+
+function frame(){
+  X.clearRect(0,0,W,H);
+
+  // Background glow
+  const g=X.createRadialGradient(W/2,H/2,0,W/2,H/2,W*0.7);
+  g.addColorStop(0,'rgba(233,84,32,0.04)');g.addColorStop(1,'transparent');
+  X.fillStyle=g;X.fillRect(0,0,W,H);
+
+  // Embers
+  for(const p of P){
+    p.w+=p.ws;p.x+=p.vx+Math.sin(p.w)*0.4;p.y+=p.vy;p.a-=p.d;
+    if(p.a<=0||p.y<-20){p.x=Math.random()*W;p.y=H+10;p.a=Math.random()*0.7+0.1}
+    X.globalAlpha=p.a;X.fillStyle=p.c;X.shadowColor=p.c;X.shadowBlur=12;
+    X.beginPath();X.arc(p.x,p.y,p.s,0,Math.PI*2);X.fill();
+  }
+
+  // Shockwave rings
+  for(let i=rings.length-1;i>=0;i--){
+    const r=rings[i];
+    r.r+=r.speed;r.a-=0.015;
+    if(r.a<=0){rings.splice(i,1);continue}
+    X.globalAlpha=r.a;X.strokeStyle='#e95420';X.lineWidth=2;
+    X.shadowColor='#e95420';X.shadowBlur=20;
+    X.beginPath();X.arc(r.x,r.y,r.r,0,Math.PI*2);X.stroke();
+  }
+
+  // Boom particles
+  for(let i=booms.length-1;i>=0;i--){
+    const b=booms[i];
+    b.x+=b.vx;b.y+=b.vy;b.vy+=b.gravity;b.vx*=b.drag;b.vy*=b.drag;b.a-=0.015;
+    if(b.a<=0){booms.splice(i,1);continue}
+    X.globalAlpha=b.a;X.fillStyle=b.c;X.shadowColor=b.c;X.shadowBlur=8;
+    X.beginPath();X.arc(b.x,b.y,b.s*b.a,0,Math.PI*2);X.fill();
+  }
+
+  // Random lightning
+  if(Math.random()<0.006){
+    const sx=Math.random()*W;
+    drawLightning(sx,0,sx+(Math.random()-0.5)*300,H*0.7,1.5+Math.random()*2);
+    // fork
+    if(Math.random()<0.5){
+      const mx=sx+(Math.random()-0.5)*150, my=H*0.35;
+      drawLightning(mx,my,mx+(Math.random()-0.5)*200,H*0.8,1);
+    }
+  }
+
+  // Random explosions
+  if(Math.random()<0.008){
+    const ex=Math.random()*W, ey=Math.random()*H*0.7;
+    spawnExplosion(ex,ey,30+Math.floor(Math.random()*40));
+    spawnRing(ex,ey);
+  }
+
+  X.globalAlpha=1;X.shadowBlur=0;
+  requestAnimationFrame(frame);
+}
+frame();
+
+// ─── 3D TILT ON MOUSE ───
+const tilt=document.getElementById('tilt');
+document.addEventListener('mousemove',e=>{
+  const cx=W/2,cy=H/2;
+  const rx=(e.clientY-cy)/cy*8;
+  const ry=-(e.clientX-cx)/cx*8;
+  tilt.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`;
+});
+
+// ─── INTRO SEQUENCE ───
+const flash=document.getElementById('flash');
+const intro=document.getElementById('intro');
+const main=document.getElementById('main');
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+(async()=>{
+  await wait(500);
+  document.getElementById('i1').classList.add('show');
+  await wait(1000);
+  document.getElementById('i2').classList.add('show');
+  await wait(1500);
+  document.getElementById('i1').classList.add('hide');
+  document.getElementById('i2').classList.add('hide');
+  await wait(500);
+
+  // SLAM
+  const boom=document.getElementById('boom');
+  boom.classList.add('slam');
+  flash.className='flash white';
+  document.body.classList.add('shake-hard');
+  spawnExplosion(W/2,H/2,100);
+  spawnRing(W/2,H/2);
+  await wait(60);
+  flash.className='flash';
+  await wait(500);
+  document.body.classList.remove('shake-hard');
+
+  await wait(1000);
+  boom.style.transition='all 0.5s';boom.style.opacity='0';
+  await wait(400);
+  intro.classList.add('gone');
+
+  // REVEAL
+  main.classList.add('show');
+  await wait(100);
+
+  // Big reveal explosion
+  flash.className='flash red';
+  document.body.classList.add('shake-hard');
+  for(let i=0;i<5;i++){
+    spawnExplosion(W/2+(Math.random()-0.5)*200, H/2+(Math.random()-0.5)*200, 60);
+    spawnRing(W/2+(Math.random()-0.5)*100, H/2+(Math.random()-0.5)*100);
+  }
+  await wait(60);
+  flash.className='flash';
+  await wait(500);
+  document.body.classList.remove('shake-hard');
+
+  // Periodic dramatic explosions
+  setInterval(()=>{
+    if(Math.random()<0.3){
+      flash.className='flash red';
+      document.body.classList.add('shake-hard');
+      spawnExplosion(W/2+(Math.random()-0.5)*400,H/2+(Math.random()-0.5)*300,50);
+      spawnRing(W/2,H/2);
+      setTimeout(()=>{flash.className='flash'},50);
+      setTimeout(()=>document.body.classList.remove('shake-hard'),500);
+    }
+  },4000);
+
+  // Constant ambient explosions in background
+  setInterval(()=>{
+    const ex=Math.random()*W, ey=Math.random()*H;
+    spawnExplosion(ex,ey,15);
+    spawnRing(ex,ey);
+  },800);
+})();
+
+// ─── DAYS COUNTER ───
+const incidentDate = new Date('2025-05-16T00:00:00');
+const now = new Date();
+const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+const incident = new Date(incidentDate.getFullYear(), incidentDate.getMonth(), incidentDate.getDate());
+const daysSince = Math.max(0, Math.floor((today - incident) / 86400000));
+const daysEl = document.getElementById('dayCount');
+let ct = 0;
+const step = Math.max(1, Math.floor(daysSince / 80));
+const counterInterval = setInterval(() => {
+  ct = Math.min(ct + step, daysSince);
+  daysEl.textContent = ct;
+  if (ct >= daysSince) clearInterval(counterInterval);
+}, 16);
+
+// ─── CLICK TO EXPLODE ───
+document.addEventListener('click',e=>{
+  spawnExplosion(e.clientX,e.clientY,80);
+  spawnRing(e.clientX,e.clientY);
+  spawnRing(e.clientX,e.clientY);
+  flash.className='flash white';
+  document.body.classList.add('shake-hard');
+  setTimeout(()=>{flash.className='flash'},40);
+  setTimeout(()=>document.body.classList.remove('shake-hard'),500);
+});
+</script>
+</body>
+</html>

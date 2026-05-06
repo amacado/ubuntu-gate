@@ -1,0 +1,7 @@
+services:
+  ubuntu-gate:
+    build: .
+    image: ghcr.io/${GITHUB_REPOSITORY:-local}/ubuntu-gate:latest
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
