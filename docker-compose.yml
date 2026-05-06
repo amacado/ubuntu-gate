@@ -1,7 +1,16 @@
 services:
-  ubuntu-gate:
-    build: .
-    image: ghcr.io/${GITHUB_REPOSITORY:-local}/ubuntu-gate:latest
-    ports:
-      - "8080:8080"
+  ubuntu_gate_app:
+    image: ghcr.io/amacado/ubuntu-gate:latest
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.ubuntu-gate.rule=Host(`ubuntu-gate.de`) || Host(`www.ubuntu-gate.de`)
+      - traefik.http.routers.ubuntu-gate.entrypoints=websecure
+      - traefik.http.routers.ubuntu-gate.tls.certresolver=le
+      - traefik.http.services.ubuntu-gate.loadbalancer.server.port=8080
+    networks:
+      - proxy
     restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
