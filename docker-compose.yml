@@ -1,6 +1,6 @@
 services:
   ubuntu_gate_app:
-    image: ghcr.io/ubuntu-gate/ubuntu-gate:latest
+    image: ghcr.io/amacado/ubuntu-gate/ubuntu-gate:latest
     labels:
       - traefik.enable=true
       - traefik.http.routers.ubuntu-gate.rule=Host(`www.ubuntu-gate.de`)
